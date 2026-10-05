@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Salida de Embarcaciones - Guardacostas Higuerote</title>
+    
+    <!-- Librerías de Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script>
+      // Credenciales oficiales de Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyDPdkhLZRmQBlD5IgmmK9MkXbSqcq4bIqs",
+        authDomain: "guardacostas-higuerote.firebaseapp.com",
+        projectId: "guardacostas-higuerote",
+        storageBucket: "guardacostas-higuerote.firebasestorage.app",
+        messagingSenderId: "984001627207",
+        appId: "1:984001627207:web:1c8d1e7a34c1dc1783dd62",
+        measurementId: "G-YH81V32B4E"
+      };
+
+      // Inicialización de la Nube
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+
+    <style>
+        :root {
+            --bg-dark: #080b11;
+            --card-bg: #0f172a;
+            --accent-blue: #0284c7;
+            --bright-blue: #38bdf8;
+            --navy-header: #001e3d;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #1e293b;
+            --success-green: #22c55e;
+            --warning-gold: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); line-height: 1.5; padding-bottom: 40px; }
+
+        .header-bar {
+            background: linear-gradient(135deg, #000000 0%, var(--navy-header) 100%);
+            border-bottom: 3px solid var(--accent-blue);
+            padding: 20px; text-align: center; position: relative; overflow: hidden;
+        }
+        .header-bar::before {
+            content: ""; position: absolute; top: 0; left: -50px; width: 120px; height: 100%;
+            background: var(--accent-blue); transform: skewX(-25deg); opacity: 0.6;
+        }
+        .header-content { max-width: 1000px; margin: 0 auto; position: relative; z-index: 2; }
+        
+        .logo-img {
+            max-width: 110px; height: auto; margin-bottom: 10px;
+            filter: drop-shadow(0px 0px 8px rgba(56, 189, 248, 0.4));
+        }
+
+        .org-title { font-size: 0.85rem; letter-spacing: 1.5px; color: var(--text-muted); text-transform: uppercase; }
+        .main-title { font-size: 1.6rem; color: var(--bright-blue); margin-top: 5px; font-weight: 700; letter-spacing: 1px; }
+        .sub-title { font-size: 1.1rem; color: var(--text-light); font-weight: 600; }
+
+        .top-action-bar { max-width: 1000px; margin: 20px auto 0; padding: 0 15px; }
+        .arribo-card-btn {
+            background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid var(--accent-blue); border-radius: 8px; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.3s ease;
+        }
+        .arribo-card-btn:hover { border-color: var(--bright-blue); box-shadow: 0 0 15px rgba(2, 132, 199, 0.3); }
+        .arribo-info h4 { color: var(--success-green); font-size: 1.05rem; }
+        .arribo-info p { font-size: 0.85rem; color: var(--text-muted); }
+        .btn-arribo-trigger { background-color: var(--success-green); color: #000; font-weight: 700; padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; }
+
+        .container { max-width: 1000px; margin: 20px auto; padding: 0 15px; }
+        .section-card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 22px; margin-bottom: 22px; }
+        .section-header { border-bottom: 2px solid var(--accent-blue); padding-bottom: 8px; margin-bottom: 18px; color: var(--bright-blue); font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea {
+            background-color: #080b11; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; color: var(--text-light); font-size: 0.95rem; outline: none;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent-blue); }
+        .time-group { display: flex; gap: 8px; }
+        .time-group input { flex: 2; }
+        .time-group select { flex: 1; }
+
+        .checklist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+        .check-item { background-color: #080b11; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; }
+        .check-item label { font-size: 0.85rem; color: var(--bright-blue); font-weight: 600; }
+        .check-item input[type="text"] { background-color: #0f172a; border: 1px solid var(--border-color); color: #fff; padding: 8px 10px; font-size: 0.88rem; border-radius: 4px; }
+
+        .btn-submit {
+            width: 100%; background: linear-gradient(135deg, var(--accent-blue) 0%, #004b87 100%);
+            color: white; border: none; padding: 16px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-card { background-color: var(--card-bg); border: 1px solid var(--accent-blue); border-radius: 10px; padding: 25px; width: 90%; max-width: 480px; }
+
+        #receipt-view { display: none; background: white; color: black; padding: 30px; border-radius: 8px; max-width: 800px; margin: 20px auto; }
+        .receipt-serial { font-size: 1.3rem; font-weight: bold; color: var(--accent-blue); margin: 10px 0; }
+        .receipt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; font-size: 0.9rem; }
+        .print-btn-bar { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-action { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-print { background-color: var(--navy-header); color: white; }
+        .btn-new { background-color: #64748b; color: white; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #receipt-view, #receipt-view * { visibility: visible; }
+            #receipt-view { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+            .print-btn-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header-bar">
+        <div class="header-content">
+            <img src="Logo_guarda_costas_venezuela.png" alt="Logo Guardacostas Venezuela" class="logo-img" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/e/e8/Logo_guarda_costas_venezuela.png';">
+            <div class="org-title">República Bolivariana de Venezuela — Comando de Guardacostas</div>
+            <div class="sub-title">Estación Secundaria de Guardacostas "Higuerote - Río Chico"</div>
+            <div class="main-title">CONTROL DE SALIDA DE EMBARCACIONES</div>
+        </div>
+    </header>
+
+    <div class="top-action-bar">
+        <div class="arribo-card-btn" onclick="openArriboModal()">
+            <div class="arribo-info">
+                <h4>⚓ ¿Ya retornaste a puerto seguro?</h4>
+                <p>Notifica inmediatamente a Guardacostas tu llegada a tierra sin volver a llenar el formulario.</p>
+            </div>
+            <button class="btn-arribo-trigger">REPORTAR ARRIBO AQUÍ</button>
+        </div>
+    </div>
+
+    <div class="container" id="form-container">
+        <form id="zarpeForm">
+            <!-- I. Datos de la Embarcación y Personal -->
+            <div class="section-card">
+                <div class="section-header">I. Datos de la Embarcación y Personal</div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Nombre de la Embarcación *</label><input type="text" id="nombreEmbarcacion" required placeholder="Ej: Mi San José III"></div>
+                    <div class="form-group"><label>Matrícula Oficial *</label><input type="text" id="matricula" required placeholder="Ej: AGSP-PE-0142"></div>
+                </div>
+                <div class="grid-2" style="margin-top: 12px;">
+                    <div class="form-group"><label>Nombre del Propietario *</label><input type="text" id="propietario" required placeholder="Nombre completo"></div>
+                    <div class="form-group"><label>C.I.V. / Pasaporte del Propietario *</label><input type="text" id="ciPropietario" required placeholder="V-12345678"></div>
+                </div>
+                <div class="grid-2" style="margin-top: 12px;">
+                    <div class="form-group"><label>Nombre del Capitán / Patrón *</label><input type="text" id="capitan" required placeholder="Nombre del responsable"></div>
+                    <div class="form-group"><label>C.I.V. del Capitán *</label><input type="text" id="ciCapitan" required placeholder="V-87654321"></div>
+                </div>
+                <div class="grid-2" style="margin-top: 12px;">
+                    <div class="form-group"><label>Cantidad de Tripulantes / Pasajeros *</label><input type="number" id="cantTripulantes" min="1" value="1" required></div>
+                    <div class="form-group"><label>Listado de Nombres y C.I. de la Tripulación</label><input type="text" id="listaTripulantes" placeholder="Ej: Juan Pérez (V-11..), Pedro Gómez (V-15..)"></div>
+                </div>
+            </div>
+
+            <!-- II. Contactos de Emergencia -->
+            <div class="section-card">
+                <div class="section-header">II. Contactos Telefónicos de Emergencia</div>
+                <div class="grid-3">
+                    <div class="form-group"><label>Teléfono de la Embarcación</label><input type="tel" id="telEmbarcacion" placeholder="0412-0000000"></div>
+                    <div class="form-group"><label>Teléfono del Capitán *</label><input type="tel" id="telCapitan" required placeholder="0414-0000000"></div>
+                    <div class="form-group"><label>Contacto de Emergencia en Tierra *</label><input type="tel" id="telEmergencia" required placeholder="0424-0000000"></div>
+                </div>
+            </div>
+
+            <!-- III. Documentación Legal Exigible -->
+            <div class="section-card">
+                <div class="section-header">III. Documentación Legal y Certificados Exigibles</div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>Registro Naval Venezolano (RENAVE) *</label>
+                        <input type="text" id="renaveDoc" required placeholder="Nº de Registro, Fecha Expedición / Vencimiento">
+                    </div>
+                    <div class="form-group">
+                        <label>Ley General de Marinas y Actividades Conexas *</label>
+                        <input type="text" id="leyMarinasDoc" required value="Ejemplar impreso/digital verificado a bordo" placeholder="Escriba la constancia de cumplimiento a bordo">
+                    </div>
+                    <div class="form-group">
+                        <label>Póliza de Responsabilidad Civil *</label>
+                        <input type="text" id="polizaSeguroDoc" required placeholder="Nº Póliza, Aseguradora y Fecha Vencimiento">
+                    </div>
+                </div>
+            </div>
+
+            <!-- IV. Especificaciones de Motores -->
+            <div class="section-card">
+                <div class="section-header">IV. Motores Fuera de Borda</div>
+                <div class="grid-3">
+                    <div class="form-group"><label>Cantidad de Motores</label><input type="number" id="cantMotores" min="1" value="1"></div>
+                    <div class="form-group"><label>Potencia (HP) / Marca</label><input type="text" id="hpMotores" placeholder="Ej: 75 HP Yamaha"></div>
+                    <div class="form-group"><label>Seriales de los Motores</label><input type="text" id="serialesMotores" placeholder="Ej: 6H3-L-102938"></div>
+                </div>
+            </div>
+
+            <!-- V. Plan de Navegación, Tiempos y Actividad Marítima -->
+            <div class="section-card">
+                <div class="section-header">V. Plan de Navegación, Tiempos y Actividad a Realizar</div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Actividad u Operación Marítima / Propósito del Zarpe (Texto Libre) *</label>
+                    <input type="text" id="actividadMaritima" required placeholder="Escriba la actividad: Pesca artesanal con palangre, traslado de pasajeros, faena de recreo, cabotaje, etc.">
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group"><label>Lugar de Partida / Salida (Texto Libre) *</label><input type="text" id="lugarSalida" required placeholder="Escriba la ubicación exacta de salida..."></div>
+                    <div class="grid-2">
+                        <div class="form-group"><label>Fecha de Salida *</label><input type="date" id="fechaSalida" required></div>
+                        <div class="form-group"><label>Hora de Salida *</label>
+                            <div class="time-group"><input type="time" id="horaSalida" required><select id="ampmSalida"><option value="AM">AM</option><option value="PM">PM</option></select></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-2" style="margin-top: 15px;">
+                    <div class="form-group"><label>Lugar de Llegada / Destino Previsto (Texto Libre) *</label><input type="text" id="lugarLlegada" required placeholder="Escriba la ubicación de llegada o zona de pesca..."></div>
+                    <div class="grid-2">
+                        <div class="form-group"><label>Fecha Estimada ETA *</label><input type="date" id="fechaEta" required></div>
+                        <div class="form-group"><label>Hora Estimada ETA *</label>
+                            <div class="time-group"><input type="time" id="horaEta" required><select id="ampmEta"><option value="AM">AM</option><option value="PM" selected>PM</option></select></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VI. Observaciones Generales del Navegante -->
+            <div class="section-card">
+                <div class="section-header">VI. Observaciones Generales y Novedades del Navegante</div>
+                <div class="form-group">
+                    <label>Observaciones, Carga Especial o Comentarios Adicionales (Texto Libre)</label>
+                    <textarea id="observacionesNavegante" rows="3" placeholder="Escriba cualquier detalle adicional de interés para la autoridad marítima..."></textarea>
+                </div>
+            </div>
+
+            <!-- VII. Lista de Chequeo de Seguridad (Campos Escribibles) -->
+            <div class="section-card">
+                <div class="section-header">VII. Lista de Chequeo de Seguridad (Escriba el Detalle / Estado)</div>
+                <div class="checklist-grid">
+                    <div class="check-item"><label>1. Cantidad de combustible</label><input type="text" id="chk1" value="60 Litros - Conforme"></div>
+                    <div class="check-item"><label>2. Cantidad de agua potable</label><input type="text" id="chk2" value="20 Litros - Conforme"></div>
+                    <div class="check-item"><label>3. Ancla de servicio y repuesto</label><input type="text" id="chk3" value="1 Principal + 1 Repuesto"></div>
+                    <div class="check-item"><label>4. Cabos y/o cadenas de ancla</label><input type="text" id="chk4" value="50 metros de cabo"></div>
+                    <div class="check-item"><label>5. Salvavidas a bordo</label><input type="text" id="chk5" value="Conforme según tripulación"></div>
+                    <div class="check-item"><label>6. Cabos de remolque</label><input type="text" id="chk6" value="30 metros operativo"></div>
+                    <div class="check-item"><label>7. Sistema de propulsión principal</label><input type="text" id="chk7" value="Operativo 100%"></div>
+                    <div class="check-item"><label>8. Baterías y cargadores</label><input type="text" id="chk8" value="Carga completa 12V"></div>
+                    <div class="check-item"><label>9. Luces de navegación operativas</label><input type="text" id="chk9" value="Verificadas y operativas"></div>
+                    <div class="check-item"><label>10. Tanques de lastre / achique</label><input type="text" id="chk10" value="Bomba manual operativa"></div>
+                    <div class="check-item"><label>11. Salvavidas circular c/ driza 25m</label><input type="text" id="chk11" value="1 Aro con driza"></div>
+                    <div class="check-item"><label>12. Radio VHF fija y antenas</label><input type="text" id="chk12" value="Canal 16 activo"></div>
+                    <div class="check-item"><label>13. Radio VHF portátil</label><input type="text" id="chk13" value="1 Portátil de respaldo"></div>
+                    <div class="check-item"><label>14. GPS navegador operativo</label><input type="text" id="chk14" value="Garmin operativo"></div>
+                    <div class="check-item"><label>15. Cartas náuticas de la zona</label><input type="text" id="chk15" value="A bordo Higuerote-Carenero"></div>
+                    <div class="check-item"><label>16. Luz de señales internas</label><input type="text" id="chk16" value="Linterna estanca operativa"></div>
+                    <div class="check-item"><label>17. Chalecos según tripulación</label><input type="text" id="chk17" value="Verificados por persona"></div>
+                    <div class="check-item"><label>18. Extintores antiincendios</label><input type="text" id="chk18" value="2 Extintores 5lbs vigentes"></div>
+                    <div class="check-item"><label>19. Kit de bengalas / pirotecnia</label><input type="text" id="chk19" value="3 Bengalas rojas vigentes"></div>
+                    <div class="check-item"><label>20. Botiquín de primeros auxilios</label><input type="text" id="chk20" value="Completo e insumos al día"></div>
+                    <div class="check-item"><label>21. Equipos AIS / SPOT / EPIRB</label><input type="text" id="chk21" value="Radiobaliza activada"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">PROCESAR NOTIFICACIÓN Y GENERAR COMPROBANTE</button>
+        </form>
+    </div>
+
+    <!-- Modal de Arribo -->
+    <div class="modal-overlay" id="arriboModal">
+        <div class="modal-card">
+            <h3 style="color: var(--bright-blue); margin-bottom: 10px;">Notificar Arribo a Tierra</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Ingresa tu Serial Único de Registro o Cédula del Capitán:</p>
+            <div class="form-group"><input type="text" id="searchSerial" placeholder="Ej: CS-2026-HIG-1042 o V-12345678"></div>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn-submit" style="background: var(--success-green); color: #000;" onclick="confirmarArriboAccion()">CONFIRMAR ARRIBO SEGURO</button>
+                <button class="btn-submit" style="background: #475569;" onclick="closeArriboModal()">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recibo Imprimible -->
+    <div class="container">
+        <div id="receipt-view">
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px;">
+                <img src="Logo_guarda_costas_venezuela.png" alt="Logo Guardacostas" style="max-width: 80px;" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/e/e8/Logo_guarda_costas_venezuela.png';">
+                <p style="font-weight: bold; font-size: 0.8rem; margin-top: 5px;">REPÚBLICA BOLIVARIANA DE VENEZUELA — ARMADA BOLIVARIANA</p>
+                <p style="font-size: 0.8rem;">COMANDO DE GUARDACOSTAS — ESTACIÓN HIGUEROTE - RÍO CHICO</p>
+                <h3 style="margin-top: 5px;">COMPROBANTE DE CONTROL DE SALIDA DE EMBARCACIÓN</h3>
+                <div class="receipt-serial" id="recSerial">CS-2026-HIG-00000</div>
+            </div>
+
+            <div class="receipt-grid">
+                <div><strong>Embarcación:</strong> <span id="recEmbarcacion"></span></div>
+                <div><strong>Matrícula:</strong> <span id="recMatrícula"></span></div>
+                <div><strong>Capitán:</strong> <span id="recCapitan"></span></div>
+                <div><strong>C.I. Capitán:</strong> <span id="recCiCapitan"></span></div>
+                <div><strong>Teléfono Capitán:</strong> <span id="recTelCapitan"></span></div>
+                <div><strong>Contacto Emergencia:</strong> <span id="recTelEmergencia"></span></div>
+                <div><strong>Actividad / Operación:</strong> <span id="recActividad"></span></div>
+                <div><strong>Registro RENAVE:</strong> <span id="recRenave"></span></div>
+                <div><strong>Ley de Marinas:</strong> <span id="recLeyMarinas"></span></div>
+                <div><strong>Póliza de Seguro:</strong> <span id="recPoliza"></span></div>
+                <div><strong>Lugar de Salida:</strong> <span id="recSalidaLugar"></span></div>
+                <div><strong>Fecha/Hora Salida:</strong> <span id="recSalidaFechaHora"></span></div>
+                <div><strong>Lugar de Destino:</strong> <span id="recLlegadaLugar"></span></div>
+                <div><strong>Fecha/Hora ETA:</strong> <span id="recEtaFechaHora"></span></div>
+                <div style="grid-column: 1 / -1;"><strong>Observaciones del Navegante:</strong> <span id="recObservaciones"></span></div>
+            </div>
+
+            <div style="margin-top: 20px; font-size: 0.8rem; text-align: center; font-style: italic;">
+                "GRANDES ACCIONES POR SU SEGURIDAD"<br>
+                Conserve este comprobante o tome una captura de pantalla. Al retornar a puerto, reporte su arribo ingresando con este serial.
+            </div>
+
+            <div class="print-btn-bar">
+                <button class="btn-action btn-print" onclick="window.print()">IMPRIMIR RECIBO / GUARDAR PDF</button>
+                <button class="btn-action btn-new" onclick="resetForm()">NUEVO REGISTRO</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('fechaSalida').valueAsDate = new Date();
+        document.getElementById('fechaEta').valueAsDate = new Date();
+
+        document.getElementById('zarpeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const randomNum = Math.floor(10000 + Math.random() * 90000);
+            const serialUnico = `CS-2026-HIG-${randomNum}`;
+
+            let inspeccionEscrita = {};
+            for (let i = 1; i <= 21; i++) {
+                inspeccionEscrita[`punto_${i}`] = document.getElementById(`chk${i}`).value;
+            }
+
+            const zarpeData = {
+                serial: serialUnico,
+                embarcacion: document.getElementById('nombreEmbarcacion').value,
+                matricula: document.getElementById('matricula').value,
+                propietario: document.getElementById('propietario').value,
+                ciPropietario: document.getElementById('ciPropietario').value,
+                capitan: document.getElementById('capitan').value,
+                ciCapitan: document.getElementById('ciCapitan').value,
+                telEmbarcacion: document.getElementById('telEmbarcacion').value,
+                telCapitan: document.getElementById('telCapitan').value,
+                telEmergencia: document.getElementById('telEmergencia').value,
+                renave: document.getElementById('renaveDoc').value,
+                leyMarinas: document.getElementById('leyMarinasDoc').value,
+                polizaSeguro: document.getElementById('polizaSeguroDoc').value,
+                actividadMaritima: document.getElementById('actividadMaritima').value,
+                observacionesNavegante: document.getElementById('observacionesNavegante').value || 'Ninguna',
+                tripulantesCount: document.getElementById('cantTripulantes').value,
+                tripulantesLista: document.getElementById('listaTripulantes').value,
+                motoresCount: document.getElementById('cantMotores').value,
+                motoresHp: document.getElementById('hpMotores').value,
+                motoresSeriales: document.getElementById('serialesMotores').value,
+                lugarSalida: document.getElementById('lugarSalida').value,
+                fechaSalida: document.getElementById('fechaSalida').value,
+                horaSalida: `${document.getElementById('horaSalida').value} ${document.getElementById('ampmSalida').value}`,
+                lugarLlegada: document.getElementById('lugarLlegada').value,
+                fechaEta: document.getElementById('fechaEta').value,
+                horaEta: `${document.getElementById('horaEta').value} ${document.getElementById('ampmEta').value}`,
+                inspeccion: inspeccionEscrita,
+                estado: 'EN MAR',
+                alertaDesactivada: false,
+                fechaRegistro: new Date().toLocaleString()
+            };
+
+            // Guardar directamente en Firebase Firestore
+            db.collection("zarpes").doc(serialUnico).set(zarpeData)
+            .then(() => {
+                document.getElementById('recSerial').innerText = serialUnico;
+                document.getElementById('recEmbarcacion').innerText = zarpeData.embarcacion;
+                document.getElementById('recMatrícula').innerText = zarpeData.matricula;
+                document.getElementById('recCapitan').innerText = zarpeData.capitan;
+                document.getElementById('recCiCapitan').innerText = zarpeData.ciCapitan;
+                document.getElementById('recTelCapitan').innerText = zarpeData.telCapitan;
+                document.getElementById('recTelEmergencia').innerText = zarpeData.telEmergencia;
+                document.getElementById('recActividad').innerText = zarpeData.actividadMaritima;
+                document.getElementById('recRenave').innerText = zarpeData.renave;
+                document.getElementById('recLeyMarinas').innerText = zarpeData.leyMarinas;
+                document.getElementById('recPoliza').innerText = zarpeData.polizaSeguro;
+                document.getElementById('recSalidaLugar').innerText = zarpeData.lugarSalida;
+                document.getElementById('recSalidaFechaHora').innerText = `${zarpeData.fechaSalida} a las ${zarpeData.horaSalida}`;
+                document.getElementById('recLlegadaLugar').innerText = zarpeData.lugarLlegada;
+                document.getElementById('recEtaFechaHora').innerText = `${zarpeData.fechaEta} a las ${zarpeData.horaEta}`;
+                document.getElementById('recObservaciones').innerText = zarpeData.observacionesNavegante;
+
+                document.getElementById('form-container').style.display = 'none';
+                document.getElementById('receipt-view').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            })
+            .catch((error) => {
+                alert("❌ Error al guardar en Firebase: " + error.message);
+            });
+        });
+
+        function openArriboModal() { document.getElementById('arriboModal').style.display = 'flex'; }
+        function closeArriboModal() { document.getElementById('arriboModal').style.display = 'none'; }
+
+        function confirmarArriboAccion() {
+            const query = document.getElementById('searchSerial').value.trim();
+            if (!query) { alert('Ingresa un número de serial o cédula válido.'); return; }
+
+            db.collection("zarpes").doc(query).get().then((doc) => {
+                if (doc.exists) {
+                    db.collection("zarpes").doc(query).update({
+                        estado: 'ARRIBADO',
+                        fechaArribo: new Date().toLocaleString()
+                    }).then(() => {
+                        alert('🟢 ¡CONFIRMACIÓN EXITOSA! Guardacostas ha recibido tu notificación de Arribo Seguro a Tierra.');
+                        closeArriboModal();
+                    });
+                } else {
+                    db.collection("zarpes").where("serial", "==", query).get().then((snapshot) => {
+                        if (!snapshot.empty) {
+                            snapshot.forEach((d) => {
+                                db.collection("zarpes").doc(d.id).update({
+                                    estado: 'ARRIBADO',
+                                    fechaArribo: new Date().toLocaleString()
+                                });
+                            });
+                            alert('🟢 ¡CONFIRMACIÓN EXITOSA! Guardacostas ha recibido tu notificación de Arribo Seguro a Tierra.');
+                            closeArriboModal();
+                        } else {
+                            db.collection("zarpes").where("ciCapitan", "==", query).get().then((snapshotCi) => {
+                                if (!snapshotCi.empty) {
+                                    snapshotCi.forEach((d) => {
+                                        db.collection("zarpes").doc(d.id).update({
+                                            estado: 'ARRIBADO',
+                                            fechaArribo: new Date().toLocaleString()
+                                        });
+                                    });
+                                    alert('🟢 ¡CONFIRMACIÓN EXITOSA! Guardacostas ha recibido tu notificación de Arribo Seguro a Tierra.');
+                                    closeArriboModal();
+                                } else {
+                                    alert('⚠ No se encontró ningún registro activo con ese serial o cédula.');
+                                }
+                            });
+                        }
+                    });
+                }
+            }).catch((err) => alert("Error al consultar en Firebase: " + err.message));
+        }
+
+        function resetForm() {
+            document.getElementById('zarpeForm').reset();
+            document.getElementById('receipt-view').style.display = 'none';
+            document.getElementById('form-container').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Mando y Control SAR - Guardacostas Higuerote</title>
+
+    <!-- Librerías de Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script>
+      // Credenciales oficiales de Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyDPdkhLZRmQBlD5IgmmK9MkXbSqcq4bIqs",
+        authDomain: "guardacostas-higuerote.firebaseapp.com",
+        projectId: "guardacostas-higuerote",
+        storageBucket: "guardacostas-higuerote.firebasestorage.app",
+        messagingSenderId: "984001627207",
+        appId: "1:984001627207:web:1c8d1e7a34c1dc1783dd62",
+        measurementId: "G-YH81V32B4E"
+      };
+
+      // Inicialización de la Nube
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+
+    <style>
+        :root {
+            --bg-dark: #05080e;
+            --panel-bg: #0b1329;
+            --card-bg: #111e38;
+            --accent-blue: #0284c7;
+            --bright-blue: #38bdf8;
+            --navy-dark: #00122e;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #1e293b;
+            --danger-red: #ef4444;
+            --success-green: #10b981;
+            --warning-amber: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding-bottom: 40px; }
+
+        .header-bar {
+            background: linear-gradient(135deg, #000000 0%, var(--navy-dark) 100%);
+            border-bottom: 3px solid var(--accent-blue);
+            padding: 15px 30px; display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .header-brand { display: flex; align-items: center; gap: 18px; }
+        .logo-img { max-width: 85px; filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.5)); }
+        .brand-text h1 { font-size: 1.3rem; color: var(--bright-blue); letter-spacing: 1px; }
+        .brand-text p { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .alert-banner {
+            background: linear-gradient(90deg, #7f1d1d 0%, #ef4444 100%);
+            color: white; padding: 12px 20px; text-align: center; font-weight: bold;
+            display: none; animation: pulse 2s infinite; font-size: 0.95rem;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.75; } 100% { opacity: 1; } }
+
+        .container { max-width: 1350px; margin: 20px auto; padding: 0 15px; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .metric-card {
+            background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px;
+            display: flex; flex-direction: column; justify-content: space-between; border-left: 4px solid var(--accent-blue);
+        }
+        .metric-card.red { border-left-color: var(--danger-red); }
+        .metric-card.green { border-left-color: var(--success-green); }
+        .metric-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
+        .metric-value { font-size: 2rem; font-weight: bold; color: var(--text-light); margin-top: 5px; }
+
+        .map-section { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 25px; }
+        .map-header { color: var(--bright-blue); font-size: 1.1rem; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; }
+        .jurisdiction-map {
+            width: 100%; height: 220px; background: radial-gradient(circle, #0f2b48 0%, #051322 100%);
+            border: 1px solid var(--accent-blue); border-radius: 6px; position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .map-grid-line { position: absolute; width: 100%; height: 100%; background-image: linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px); background-size: 30px 30px; }
+        .map-zone-label { position: absolute; font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: bold; letter-spacing: 1px; }
+
+        .table-section { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; position: relative; }
+        .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap; }
+        .search-input { background-color: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; padding: 10px 14px; border-radius: 6px; width: 300px; outline: none; }
+        .search-input:focus { border-color: var(--bright-blue); }
+
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+        .data-table th { background-color: var(--navy-dark); color: var(--bright-blue); padding: 12px; border-bottom: 2px solid var(--accent-blue); text-transform: uppercase; font-size: 0.8rem; }
+        .data-table td { padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .data-table tr:hover { background-color: rgba(2, 132, 199, 0.08); }
+
+        .badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; display: inline-block; }
+        .badge-mar { background-color: rgba(2, 132, 199, 0.2); color: var(--bright-blue); border: 1px solid var(--accent-blue); }
+        .badge-arribado { background-color: rgba(16, 185, 129, 0.2); color: var(--success-green); border: 1px solid var(--success-green); }
+        .badge-alerta { background-color: rgba(239, 68, 68, 0.2); color: var(--danger-red); border: 1px solid var(--danger-red); animation: pulse 1.5s infinite; }
+
+        .action-dropdown { position: relative; display: inline-block; }
+        .btn-dots {
+            background: #1e293b; color: var(--text-light); border: 1px solid var(--border-color);
+            border-radius: 50%; width: 34px; height: 34px; font-size: 1.2rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .btn-dots:hover { background-color: var(--accent-blue); color: white; border-color: var(--bright-blue); }
+
+        .dropdown-menu {
+            display: none; position: absolute; right: 0; top: 40px; background-color: var(--card-bg);
+            border: 1px solid var(--accent-blue); border-radius: 8px; width: 220px; box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            z-index: 100; overflow: hidden;
+        }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item {
+            padding: 10px 14px; font-size: 0.85rem; color: var(--text-light); display: flex; align-items: center;
+            gap: 10px; cursor: pointer; transition: background 0.2s; text-decoration: none; border-bottom: 1px solid var(--border-color);
+        }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover { background-color: rgba(56, 189, 248, 0.15); color: var(--bright-blue); }
+        .dropdown-item.danger:hover { background-color: rgba(239, 68, 68, 0.2); color: var(--danger-red); }
+
+        /* Modal Ficha Completa del Navegante */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
+        .modal-card-lg { background-color: var(--panel-bg); border: 1px solid var(--accent-blue); border-radius: 10px; width: 100%; max-width: 950px; max-height: 90vh; overflow-y: auto; padding: 25px; }
+        
+        .ficha-header { border-bottom: 2px solid var(--accent-blue); padding-bottom: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .print-header-official { display: none; text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+        .print-header-official img { max-width: 80px; }
+        .print-header-official p { font-size: 0.8rem; font-weight: bold; margin: 2px 0; color: #000; }
+
+        .ficha-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; font-size: 0.88rem; margin-bottom: 20px; }
+        .ficha-box { background-color: var(--card-bg); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .ficha-box label { color: var(--text-muted); font-size: 0.75rem; display: block; text-transform: uppercase; font-weight: bold; margin-bottom: 3px; }
+        .ficha-box span { color: var(--bright-blue); font-weight: 600; word-break: break-word; }
+
+        .inspeccion-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 0.82rem; }
+        .inspeccion-item { background-color: var(--bg-dark); padding: 8px 12px; border-radius: 4px; border-left: 3px solid var(--accent-blue); }
+
+        .modal-btn-bar { display: flex; gap: 12px; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px; }
+        .btn-modal-action { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-print-modal { background-color: var(--accent-blue); color: white; }
+        .btn-close-modal { background-color: #475569; color: white; }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #fichaModal, #fichaModal * { visibility: visible !important; }
+            #fichaModal { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: auto !important; background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+            .modal-card-lg { border: none !important; background: white !important; color: black !important; max-width: 100% !important; box-shadow: none !important; padding: 15px !important; }
+            .modal-btn-bar, .ficha-header button, .action-dropdown, .btn-dots { display: none !important; }
+            .print-header-official { display: block !important; }
+            .ficha-box { background-color: #f8fafc !important; border: 1px solid #cbd5e1 !important; color: black !important; }
+            .ficha-box label { color: #475569 !important; }
+            .ficha-box span { color: #001e3d !important; font-weight: bold !important; }
+            .inspeccion-item { background-color: #f1f5f9 !important; color: black !important; border-left: 3px solid #001e3d !important; }
+            .inspeccion-item strong { color: #001e3d !important; }
+            .inspeccion-item span { color: #0f172a !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="alert-banner" id="alertBanner">
+        🚨 ATENCIÓN COMANDO: EXISTE UNA O MÁS EMBARCACIONES CON TIEMPO ETA VENCIDO (+1 HORA) SIN REPORTE DE ARRIBO
+    </div>
+
+    <header class="header-bar">
+        <div class="header-brand">
+            <img src="Logo_guarda_costas_venezuela.png" alt="Logo Guardacostas" class="logo-img" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/e/e8/Logo_guarda_costas_venezuela.png';">
+            <div class="brand-text">
+                <h1>ESTACIÓN SECUNDARIA DE GUARDACOSTAS HIGUEROTE - RÍO CHICO</h1>
+                <p>Centro de Mando y Control de Registro de Zarpes y Monitoreo SAR</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Zarpes Registrados</div>
+                <div class="metric-value" id="countTotal">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Navegando (En Mar)</div>
+                <div class="metric-value" style="color: var(--bright-blue);" id="countEnMar">0</div>
+            </div>
+            <div class="metric-card green">
+                <div class="metric-title">Arribos Confirmados</div>
+                <div class="metric-value" style="color: var(--success-green);" id="countArribados">0</div>
+            </div>
+            <div class="metric-card red">
+                <div class="metric-title">Alertas ETA Vencidas</div>
+                <div class="metric-value" style="color: var(--danger-red);" id="countAlertas">0</div>
+            </div>
+        </div>
+
+        <div class="map-section">
+            <div class="map-header">
+                <span>📍 Jurisdicción Marítima Carenero - Higuerote - Río Chico</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Cuadrante de Cobertura SAR</span>
+            </div>
+            <div class="jurisdiction-map">
+                <div class="map-grid-line"></div>
+                <div class="map-zone-label" style="top: 15%; left: 20%;">FARALLÓN CENTINELA</div>
+                <div class="map-zone-label" style="top: 30%; left: 60%;">CABO CODERA</div>
+                <div class="map-zone-label" style="top: 60%; left: 35%;">CARENERO / HIGUEROTE</div>
+                <div class="map-zone-label" style="bottom: 15%; right: 20%;">SECTOR RÍO CHICO / MACHURUCUTO</div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-controls">
+                <h3 style="color: var(--bright-blue);">Consola de Notificaciones Recibidas</h3>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por Serial, Embarcación o Cédula..." onkeyup="filtrarTabla()">
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Serial</th>
+                        <th>Embarcación / Matrícula</th>
+                        <th>Capitán / Teléfono</th>
+                        <th>Salida (Lugar y Hora)</th>
+                        <th>ETA (Lugar y Hora)</th>
+                        <th>Estado</th>
+                        <th>Ajustes</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCuerpo">
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Ficha Completa del Navegante -->
+    <div class="modal-overlay" id="fichaModal">
+        <div class="modal-card-lg">
+            
+            <div class="print-header-official">
+                <img src="Logo_guarda_costas_venezuela.png" alt="Logo Guardacostas" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/e/e8/Logo_guarda_costas_venezuela.png';">
+                <p>REPÚBLICA BOLIVARIANA DE VENEZUELA — ARMADA BOLIVARIANA</p>
+                <p>COMANDO DE GUARDACOSTAS — ESTACIÓN HIGUEROTE - RÍO CHICO</p>
+                <h3 style="margin-top: 5px; color: #000;">EXPEDIENTE TÉCNICO Y FICHA OFICIAL DE REGISTRO DE SALIDA</h3>
+            </div>
+
+            <div class="ficha-header">
+                <div>
+                    <h2 style="color: var(--bright-blue);" id="modalSerial">CS-2026-HIG-00000</h2>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">EXPEDIENTE OFICIAL DE INSPECCIÓN Y REGISTRO DE SALIDA</p>
+                </div>
+                <button onclick="closeFichaModal()" style="background: var(--danger-red); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">X</button>
+            </div>
+
+            <div class="ficha-grid">
+                <div class="ficha-box"><label>Nombre de Embarcación</label><span id="mEmbarcacion">--</span></div>
+                <div class="ficha-box"><label>Matrícula Oficial</label><span id="mMatricula">--</span></div>
+                <div class="ficha-box"><label>Teléfono Embarcación</label><span id="mTelEmbarcacion">--</span></div>
+                <div class="ficha-box"><label>Propietario / C.I.</label><span id="mPropietario">--</span></div>
+                <div class="ficha-box"><label>Capitán / C.I.</label><span id="mCapitan">--</span></div>
+                <div class="ficha-box"><label>Teléfono Capitán</label><span id="mTelCapitan">--</span></div>
+                <div class="ficha-box"><label>Contacto Emergencia Tierra</label><span id="mTelEmergencia">--</span></div>
+                <div class="ficha-box"><label>Actividad u Operación Marítima</label><span id="mActividad">--</span></div>
+                <div class="ficha-box"><label>Registro RENAVE</label><span id="mRenave">--</span></div>
+                <div class="ficha-box"><label>Ley General de Marinas</label><span id="mLeyMarinas">--</span></div>
+                <div class="ficha-box"><label>Póliza de Responsabilidad Civil</label><span id="mPoliza">--</span></div>
+                <div class="ficha-box"><label>Personal a Bordo (POB)</label><span id="mTripulantes">--</span></div>
+                <div class="ficha-box"><label>Especificación de Motores</label><span id="mMotores">--</span></div>
+                <div class="ficha-box"><label>Partida / Salida</label><span id="mSalida">--</span></div>
+                <div class="ficha-box"><label>Llegada / Destino ETA</label><span id="mEta">--</span></div>
+                <div class="ficha-box"><label>Estado Operativo Actual</label><span id="mEstadoActual">--</span></div>
+                <div class="ficha-box"><label>Fecha/Hora de Registro</label><span id="mFechaRegistro">--</span></div>
+                <div class="ficha-box" style="grid-column: 1 / -1;"><label>Observaciones del Navegante</label><span id="mObsNavegante" style="color: var(--bright-blue);">Ninguna</span></div>
+                <div class="ficha-box" style="grid-column: 1 / -1;"><label>Observaciones Oficiales / Control de Alertas</label><span id="mNotaOficial" style="color: var(--warning-amber);">Sin observaciones</span></div>
+            </div>
+
+            <h4 style="color: var(--bright-blue); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Detalle de los 21 Puntos de Seguridad Declarados</h4>
+            <div class="inspeccion-list" id="mInspeccionDetalles">
+                <!-- Puntos dinámicos -->
+            </div>
+
+            <div class="modal-btn-bar">
+                <button class="btn-modal-action btn-print-modal" onclick="window.print()">🖨️ IMPRIMIR FICHA COMPLETA / GUARDAR PDF</button>
+                <button class="btn-modal-action btn-close-modal" onclick="closeFichaModal()">CERRAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let zarpesLocales = [];
+
+        // Escucha en TIEMPO REAL directamente desde Firebase Firestore
+        db.collection("zarpes").onSnapshot((snapshot) => {
+            zarpesLocales = [];
+            snapshot.forEach((doc) => {
+                zarpesLocales.push({ id: doc.id, ...doc.data() });
+            });
+            renderizarTabla(zarpesLocales);
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.matches('.btn-dots')) {
+                const dropdowns = document.getElementsByClassName('dropdown-menu');
+                for (let i = 0; i < dropdowns.length; i++) {
+                    dropdowns[i].classList.remove('show');
+                }
+            }
+        });
+
+        function toggleDropdown(event, index) {
+            event.stopPropagation();
+            const dropdowns = document.getElementsByClassName('dropdown-menu');
+            for (let i = 0; i < dropdowns.length; i++) {
+                if (i !== index) dropdowns[i].classList.remove('show');
+            }
+            document.getElementById('dropdown-' + index).classList.toggle('show');
+        }
+
+        function renderizarTabla(zarpes) {
+            const tbody = document.getElementById('tablaCuerpo');
+            tbody.innerHTML = '';
+
+            let total = zarpes.length;
+            let enMar = 0;
+            let arribados = 0;
+            let alertas = 0;
+            let existeAlertaActiva = false;
+
+            const ahora = new Date();
+
+            zarpes.forEach((z, index) => {
+                let esAlerta = false;
+                if (z.estado === 'EN MAR' && !z.alertaDesactivada) {
+                    try {
+                        const [year, month, day] = z.fechaEta.split('-');
+                        let [time, modifier] = z.horaEta.split(' ');
+                        let [hours, minutes] = time.split(':');
+                        hours = parseInt(hours, 10);
+                        if (modifier === 'PM' && hours < 12) hours += 12;
+                        if (modifier === 'AM' && hours === 12) hours = 0;
+
+                        const etaDate = new Date(year, month - 1, day, hours, minutes);
+                        const etaLimite = new Date(etaDate.getTime() + (60 * 60 * 1000));
+
+                        if (ahora > etaLimite) {
+                            esAlerta = true;
+                            alertas++;
+                            existeAlertaActiva = true;
+                        } else {
+                            enMar++;
+                        }
+                    } catch (err) { enMar++; }
+                } else if (z.estado === 'ARRIBADO') {
+                    arribados++;
+                } else if (z.estado === 'EN MAR') {
+                    enMar++;
+                }
+
+                const tr = document.createElement('tr');
+                if (esAlerta) tr.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+
+                let badgeHtml = z.estado === 'ARRIBADO' ? '<span class="badge badge-arribado">ARRIBADO</span>' :
+                               (esAlerta ? '<span class="badge badge-alerta">🚨 ETA VENCIDA</span>' : '<span class="badge badge-mar">EN MAR</span>');
+
+                let embarcacionLimpia = (z.embarcacion || '').replace(/'/g, "\\'");
+
+                let dropdownMenuHtml = `
+                    <div class="action-dropdown">
+                        <button class="btn-dots" onclick="toggleDropdown(event, ${index})">⋮</button>
+                        <div class="dropdown-menu" id="dropdown-${index}">
+                            <div class="dropdown-item" onclick="verFicha(${index})">👁️ Ver Ficha Completa</div>
+                            ${z.estado === 'EN MAR' ? `<div class="dropdown-item" onclick="marcarArribo('\${z.id}')">🟢 Confirmar Arribo</div>` : ''}
+                            ${esAlerta ? `<div class="dropdown-item" onclick="desactivarAlerta('\${z.id}')">🔕 Desactivar Alerta SAR</div>` : ''}
+                            <div class="dropdown-item" onclick="verFichaEImprimir(${index})">🖨️ Imprimir / Guardar PDF</div>
+                            <div class="dropdown-item danger" onclick="eliminarFichaSegura('${z.id}', '${embarcacionLimpia}', '${z.serial}')">🗑️ Eliminar Registro</div>
+                        </div>
+                    </div>
+                `;
+
+                tr.innerHTML = `
+                    <td style="font-weight:bold; color:var(--bright-blue);">${z.serial}</td>
+                    <td><strong>${z.embarcacion}</strong><br><small style="color:var(--text-muted);">${z.matricula}</small></td>
+                    <td>${z.capitan}<br><small style="color:var(--text-muted);">${z.telCapitan}</small></td>
+                    <td>${z.lugarSalida}<br><small style="color:var(--text-muted);">${z.fechaSalida} ${z.horaSalida}</small></td>
+                    <td>${z.lugarLlegada}<br><small style="color:var(--text-muted);">${z.fechaEta} ${z.horaEta}</small></td>
+                    <td>${badgeHtml}</td>
+                    <td>${dropdownMenuHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('countTotal').innerText = total;
+            document.getElementById('countEnMar').innerText = enMar;
+            document.getElementById('countArribados').innerText = arribados;
+            document.getElementById('countAlertas').innerText = alertas;
+            document.getElementById('alertBanner').style.display = existeAlertaActiva ? 'block' : 'none';
+        }
+
+        function verFicha(index) {
+            const z = zarpesLocales[index];
+
+            document.getElementById('modalSerial').innerText = z.serial;
+            document.getElementById('mEmbarcacion').innerText = z.embarcacion;
+            document.getElementById('mMatricula').innerText = z.matricula;
+            document.getElementById('mTelEmbarcacion').innerText = z.telEmbarcacion || 'No registrado';
+            document.getElementById('mPropietario').innerText = z.propietario + ' (C.I. ' + z.ciPropietario + ')';
+            document.getElementById('mCapitan').innerText = z.capitan + ' (C.I. ' + z.ciCapitan + ')';
+            document.getElementById('mTelCapitan').innerText = z.telCapitan;
+            document.getElementById('mTelEmergencia').innerText = z.telEmergencia;
+            document.getElementById('mActividad').innerText = z.actividadMaritima || 'No especificada';
+            document.getElementById('mRenave').innerText = z.renave || 'No especificado';
+            document.getElementById('mLeyMarinas').innerText = z.leyMarinas || 'No especificado';
+            document.getElementById('mPoliza').innerText = z.polizaSeguro || 'No especificada';
+            document.getElementById('mTripulantes').innerText = z.tripulantesCount + ' Pers. - Listado: ' + (z.tripulantesLista || 'Sin lista');
+            document.getElementById('mMotores').innerText = z.motoresCount + ' Motor(es) | ' + (z.motoresHp || 'N/D') + ' | Ser: ' + (z.motoresSeriales || 'N/D');
+            document.getElementById('mSalida').innerText = z.lugarSalida + ' (' + z.fechaSalida + ' a las ' + z.horaSalida + ')';
+            document.getElementById('mEta').innerText = z.lugarLlegada + ' (' + z.fechaEta + ' a las ' + z.horaEta + ')';
+            document.getElementById('mEstadoActual').innerText = z.estado + (z.fechaArribo ? ' (Arribado el: ' + z.fechaArribo + ')' : '');
+            document.getElementById('mFechaRegistro').innerText = z.fechaRegistro || 'No registrada';
+            document.getElementById('mObsNavegante').innerText = z.observacionesNavegante || "Ninguna";
+            document.getElementById('mNotaOficial').innerText = z.notaOficial || "Sin observaciones oficiales";
+
+            const contenedorInspeccion = document.getElementById('mInspeccionDetalles');
+            contenedorInspeccion.innerHTML = '';
+            
+            const titulosNombres = [
+                "1. Combustible", "2. Agua potable", "3. Anclas", "4. Cabos/Cadenas", "5. Salvavidas",
+                "6. Cabos remolque", "7. Propulsión", "8. Baterías", "9. Luces navegación", "10. Achique/Lastre",
+                "11. Aro salvavidas", "12. Radio VHF Fija", "13. Radio VHF Portátil", "14. GPS", "15. Cartas Náuticas",
+                "16. Luz de señales", "17. Chalecos", "18. Extintores", "19. Bengalas", "20. Botiquín", "21. AIS/SPOT/EPIRB"
+            ];
+
+            for (let i = 1; i <= 21; i++) {
+                const valor = z.inspeccion ? z.inspeccion[`punto_${i}`] : 'Conforme';
+                const div = document.createElement('div');
+                div.className = 'inspeccion-item';
+                div.innerHTML = `<strong>${titulosNombres[i-1]}:</strong> <span style="color:#38bdf8;">${valor}</span>`;
+                contenedorInspeccion.appendChild(div);
+            }
+
+            document.getElementById('fichaModal').style.display = 'flex';
+        }
+
+        function verFichaEImprimir(index) {
+            verFicha(index);
+            setTimeout(() => { window.print(); }, 300);
+        }
+
+        function closeFichaModal() { document.getElementById('fichaModal').style.display = 'none'; }
+
+        function marcarArribo(docId) {
+            db.collection("zarpes").doc(docId).update({
+                estado: 'ARRIBADO',
+                fechaArribo: new Date().toLocaleString()
+            }).then(() => {
+                alert("🟢 Estado actualizado a ARRIBADO.");
+            }).catch((err) => {
+                alert("Error al actualizar estado: " + err.message);
+            });
+        }
+
+        function desactivarAlerta(docId) {
+            const motivo = prompt("INGRESE OBSERVACIÓN OFICIAL PARA DESACTIVAR LA ALERTA SAR:\n(Ej: Contacto por radio VHF positivo / Navegante confirmó arribo seguro)");
+            
+            if (motivo !== null && motivo.trim() !== "") {
+                db.collection("zarpes").doc(docId).update({
+                    alertaDesactivada: true,
+                    notaOficial: `Alerta desactivada el ${new Date().toLocaleString()} por: ${motivo}`
+                }).then(() => {
+                    alert("🟢 Alerta desactivada exitosamente en la nube.");
+                }).catch((err) => {
+                    alert("Error al desactivar la alerta: " + err.message);
+                });
+            }
+        }
+
+        function eliminarFichaSegura(docId, embarcacionNombre, serial) {
+            const confirmacion = prompt(`⚠ CONFIRMACIÓN DE SEGURIDAD CRÍTICA:\n\nPara borrar la ficha de "${embarcacionNombre}" (${serial}), escriba exactamente el NOMBRE de la embarcación a continuación:`);
+            
+            if (confirmacion && confirmacion.trim().toLowerCase() === embarcacionNombre.trim().toLowerCase()) {
+                db.collection("zarpes").doc(docId).delete().then(() => {
+                    alert("🗑️ Ficha eliminada permanentemente de la nube.");
+                }).catch((err) => {
+                    alert("Error al eliminar la ficha: " + err.message);
+                });
+            } else if (confirmacion !== null) {
+                alert("❌ El nombre ingresado no coincide. La ficha NO fue eliminada por seguridad.");
+            }
+        }
+
+        function filtrarTabla() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filas = document.getElementById('tablaCuerpo').getElementsByTagName('tr');
+            for (let i = 0; i < filas.length; i++) {
+                const texto = filas[i].innerText.toLowerCase();
+                filas[i].style.display = texto.includes(query) ? '' : 'none';
+            }
+        }
+    </script>
+</body>
+</html>
